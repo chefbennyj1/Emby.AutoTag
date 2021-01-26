@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Persistence;
-using MediaBrowser.Model.Configuration;
-using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Tasks;
 
@@ -16,10 +12,11 @@ namespace ItemTagEditor
 {
     public class AutoTagScheduledTask : IScheduledTask, IConfigurableScheduledTask
     {
-        private ILibraryManager LibraryManager { get; set; }
-        private IUserManager UserManager { get; set; }
-        private ILogger Log { get; }
+        private ILibraryManager LibraryManager         { get; set; }
+        private IUserManager UserManager               { get; set; }
+        private ILogger Log                            { get; }
         private IMediaSourceManager MediaSourceManager { get; }
+
         public AutoTagScheduledTask(ILibraryManager libraryManager, IUserManager userManager, ILogManager logManager, IMediaSourceManager mediaSourceManager)
         {
             LibraryManager = libraryManager;
@@ -35,20 +32,17 @@ namespace ItemTagEditor
             
             foreach (var rule in rules)
             {
-                Log.Info(rule.Profile.Type);
-                Log.Info(rule.Profile.Container);
-                Log.Info(rule.Profile.AudioCodec);
-
-                // ReSharper disable once ComplexConditionExpression
-                var itemQuery = LibraryManager.QueryItems(new InternalItemsQuery()
-                {
-                    Recursive        = true,
-                    IncludeItemTypes = new[] { rule.Profile.Type },
-                    User             = UserManager.Users.FirstOrDefault(user => user.Policy.IsAdministrator),
-                    AudioCodecs = new []{ rule.Profile.AudioCodec ?? "" },
-                    Containers = new []{ rule.Profile.Container ?? "" },
-                    OfficialRatings = new []{ rule.Profile.Rating ?? "" }
-                });
+                
+                var internalItemQuery                                                                 = new InternalItemsQuery();
+                if (!string.IsNullOrEmpty(rule.Profile.AudioCodec)) internalItemQuery.AudioCodecs     = new[] { rule.Profile.AudioCodec };
+                if (!string.IsNullOrEmpty(rule.Profile.Container))  internalItemQuery.Containers      = new[] { rule.Profile.Container };
+                if (!string.IsNullOrEmpty(rule.Profile.Rating))     internalItemQuery.OfficialRatings = new[] { rule.Profile.Rating };
+                if (!string.IsNullOrEmpty(rule.Profile.VideoCodec)) internalItemQuery.VideoCodecs     = new[] { rule.Profile.VideoCodec };
+                if (rule.Profile.Year > 0)                          internalItemQuery.Years           = new[] { rule.Profile.Year };
+                internalItemQuery.IncludeItemTypes                                                    = new[] { rule.Profile.Type };
+                internalItemQuery.Recursive                                                           = true;
+                
+                var itemQuery = LibraryManager.GetItemsResult(internalItemQuery);
 
                 Log.Info($"Query has {itemQuery.TotalRecordCount} items.");
 
@@ -59,23 +53,40 @@ namespace ItemTagEditor
                         state.Break();
                     }
 
-                    foreach (var stream in item.GetMediaStreams())
+                    if (string.IsNullOrEmpty(rule.Profile.Resolution)) return;
+                    var videoStreams = item.GetMediaStreams();
+                    foreach (var stream in videoStreams)
                     {
-                        if (stream.Width != null)
+                        if (string.IsNullOrEmpty(stream.DisplayTitle)) continue;
+                        if (stream.DisplayTitle.ToLowerInvariant().Contains(rule.Profile.Resolution))
                         {
-                            if (stream.Width == Convert.ToInt32(rule.Profile.Resolution.Replace("p", string.Empty)))
+                            Log.Info($"{item.Name} tags to add {rule.Tags.ToArray()}");
+                            
+                            var tags = item.Tags.ToList();
+                            
+                            if (rule.OverwriteTags)
                             {
-
+                                tags = rule.Tags;
                             }
+                            else
+                            {
+                                foreach (var tag in tags)
+                                {
+                                    //If we already have a tag on the baseItem that matches what we are trying to add
+                                    if (rule.Tags.Exists(t => t == tag)) 
+                                    {
+                                        rule.Tags.RemoveAll(t => t == tag); //Remove the existing tag from the list we are adding.
+                                    }
+                                }
+                                tags.AddRange(rule.Tags);
+                            }
+
+                            item.Tags = tags.ToArray();
+                            LibraryManager.UpdateItem(item, item.Parent, ItemUpdateType.MetadataEdit);
                         }
+
                     }
-                    
 
-                    
-                    Log.Info($"{item.Name}\n{item.Container}\n{item.OfficialRating}\n{}");
-                    
-
-                    
                 });
 
             }

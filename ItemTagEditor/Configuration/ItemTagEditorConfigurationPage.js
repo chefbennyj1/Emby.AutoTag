@@ -212,7 +212,7 @@
             html += '<option value=""></option>';
             html += '<option value="720p">720p</option>';
             html += '<option value="1080p">1080p</option>';
-            html += '<option value="2160p">2160p</option>';
+            html += '<option value="4k">4k</option>';
             html += '</select>';
             html += '<div class="selectArrowContainer">';
             html += '<div style="visibility: hidden;">0</div><i class="selectArrow md-icon"></i>';
@@ -379,9 +379,10 @@
             var html = '';
             html += '<div id="' + rule.Id + '"  class="listItem listItem-border">';
             html += '<div>';
-            html += '<svg style="width:24px;height:24px" viewBox="0 0 24 24">';
-            html += '<path fill="darkgrey" d="M4 2V8H2V2H4M2 22V16H4V22H2M5 12C5 13.11 4.11 14 3 14C1.9 14 1 13.11 1 12C1 10.9 1.9 10 3 10C4.11 10 5 10.9 5 12M24 6V18C24 19.11 23.11 20 22 20H10C8.9 20 8 19.11 8 18V14L6 12L8 10V6C8 4.89 8.9 4 10 4H22C23.11 4 24 4.89 24 6Z" />';
-            html += '</svg>';
+            html += ' <button is="emby-button" id="editTagRule" class="fab emby-input-iconbutton paper-icon-button-light emby-button" style="margin-left: 1em;"><i class="md-icon">edit</i></button>';
+            //html += '<svg style="width:24px;height:24px" viewBox="0 0 24 24">';
+            //html += '<path fill="darkgrey" d="M4 2V8H2V2H4M2 22V16H4V22H2M5 12C5 13.11 4.11 14 3 14C1.9 14 1 13.11 1 12C1 10.9 1.9 10 3 10C4.11 10 5 10.9 5 12M24 6V18C24 19.11 23.11 20 22 20H10C8.9 20 8 19.11 8 18V14L6 12L8 10V6C8 4.89 8.9 4 10 4H22C23.11 4 24 4.89 24 6Z" />';
+            //html += '</svg>';
             html += '</div>';
 
             html += '<div style="display:block; margin-right:2em">';
